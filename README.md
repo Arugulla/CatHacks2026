@@ -1,6 +1,8 @@
 # CatHacks2026
 University Of Kentucky Hackathon Spring 2026 project
 
+Person 1: Frontend / UI / Experience
+Owns everything the user sees and interacts with
 Responsibilities:
 Layout (title, buttons, game area)
 Western theme styling (this matters for judging)
@@ -13,14 +15,15 @@ Game screen:
 Countdown text
 Big “DRAW!” signal
 Result screen:
+
 “Player 1 Wins” / “Too Early!”
 Reaction times
 Suggested tools:
 HTML + CSS
 Google Fonts (search western-style fonts)
 CSS animations or simple JS DOM updates
-👤 Person 2: Game Logic / Core Mechanics
 
+👤 Person 2: Game Logic / Core Mechanics
 Owns the brain of the game
 
 Responsibilities:
