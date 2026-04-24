@@ -1,7 +1,8 @@
+
 <!-- 
-  TEST, STATEMENT
-  USE THIS WEBSITE TO TEST (http://172.29.14.88:8000/TEST.html)
+ http://localhost:8000/TEST.html
 -->
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -813,10 +814,10 @@ function triggerDraw() {
   playDrawHorn();
 
   // AI opponent (random 200–600ms)
-  const aiMs = 200 + Math.random() * 400;
+  const aiMs = Math.round(200 + Math.random() * 400);
   timeoutId = setTimeout(() => {
     if (gamePhase === 'live') {
-      endRound('ai', aiMs);
+      endRound('ai', aiMs, aiMs);
     }
   }, aiMs);
 }
@@ -838,7 +839,7 @@ function playerShot() {
   const reactionMs = Math.round(performance.now() - drawTime);
   clearTimeout(timeoutId);
 
-  const aiMs = 200 + Math.random() * 400;
+  const aiMs = Math.round(200 + Math.random() * 400);
   const playerWon = reactionMs < aiMs;
 
   muzzleFlash();
@@ -855,7 +856,7 @@ function endRound(winner, playerMs, aiMs) {
     bestMs = playerMs;
   }
 
-  showResult(winner, playerMs, Math.round(aiMs));
+  showResult(winner, Math.round(playerMs), Math.round(aiMs));
 }
 
 function showResult(winner, playerMs, aiMs) {
@@ -895,14 +896,16 @@ function showResult(winner, playerMs, aiMs) {
 
   // Time display
   const isNewRecord = winner === 'player' && bestMs === playerMs && playerMs < 300;
+  const displayPlayer = Math.round(playerMs);
+  const displayAi = Math.round(aiMs);
   timeDiv.innerHTML = `
     <div class="player-time">
       <div class="player-label">YOUR DRAW</div>
-      <div class="player-ms ${winner === 'player' ? 'best' : ''}">${playerMs}ms${isNewRecord ? '<span class="new-record">NEW RECORD</span>' : ''}</div>
+      <div class="player-ms ${winner === 'player' ? 'best' : ''}">${displayPlayer}ms${isNewRecord ? '<span class="new-record">NEW RECORD</span>' : ''}</div>
     </div>
     <div class="player-time">
       <div class="player-label">OUTLAW AI</div>
-      <div class="player-ms p2">${aiMs}ms</div>
+      <div class="player-ms p2">${displayAi}ms</div>
     </div>
   `;
 
