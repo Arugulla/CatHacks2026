@@ -59,7 +59,7 @@ export function playCountBleep(n) {
   ensureAudio();
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  const freqs = { 3: 440, 2: 550, 1: 660 };
+  const freqs = { 3: 440, 2: 550, 1: 660, 0: 770 };
   osc.frequency.value = freqs[n] || 440; osc.type = 'sine';
   gain.gain.setValueAtTime(vol() * 0.25, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
@@ -122,7 +122,7 @@ export function playCrashSound() {
 export const HATS = ['🤠','👒','🎩','⛑️','🪖','👑','🎓','🧢','🏴‍☠️'];
 export const FACES = ['😎','😈','🤡','👻','💀','🤖','👽','🦊','🕵️','🃏'];
 export const OUTFITS = ['👘','🥻','🧥','🦺','👔','🥼','🧣','🧤','🥾'];
-export const ALL_GEAR = ['👘','🥻','🧥','🦺','👔','🥼','🧣','🧤','🥾', '😎','😈','🤡','👻','💀','🤖','👽','🦊','🕵️','🃏','🤠','👒','🎩','⛑️','🪖','👑','🎓','🧢','🏴‍☠️'];
+export const ALL_GEAR = [...HATS, ...OUTFITS, ...FACES];
 
 export const CASE_ITEMS = [
   {emoji:'🤠',rarity:'common'},{emoji:'👒',rarity:'common'},{emoji:'😎',rarity:'common'},
@@ -181,8 +181,8 @@ export let p2RoundTime = null;
 let timeoutId = null;
 let baitShownThisRound = false;
 
-const COUNTDOWN_VALUES = [3, 2, 1];
-const BAIT_WORDS = ['DRAW?', 'FIRE?', 'NOW?', 'BANG?','SHOOT?','GO?','READY?','POW?','BLAM?'];
+const COUNTDOWN_VALUES = [3, 2, 1, 0];
+const BAIT_WORDS = ['DRAW?', 'FIRE?', 'NOW?', 'BANG?'];
 
 export let cb = {
   onWord: () => {},
@@ -216,8 +216,10 @@ export function startRound() {
 function randomDelay() { return Math.floor(Math.random() * 3001); }
 
 function nextCount(last) {
-  if (Math.random() < 0.35) return last;
-  const choices = COUNTDOWN_VALUES.filter(n => n !== last);
+  // Countdown can repeat or skip downward, but it can never backtrack upward.
+  // Examples allowed: 3 -> 3, 3 -> 1, 3 -> 0, 1 -> 0.
+  // Examples blocked: 0 -> 3, 1 -> 2, 2 -> 3.
+  const choices = COUNTDOWN_VALUES.filter(n => n <= last);
   return choices[Math.floor(Math.random() * choices.length)];
 }
 
@@ -241,6 +243,14 @@ function runCountdown(step, lastNumber) {
   const n = step === 0 ? 3 : nextCount(lastNumber);
   cb.onWord(String(n), false);
   playCountBleep(n);
+
+  // Zero means the duel can become live instantly. Do not continue to another
+  // countdown number after 0, because that would feel like backtracking.
+  if (n === 0) {
+    timeoutId = setTimeout(() => { if (gamePhase === 'countdown') triggerDraw(); }, 0);
+    return;
+  }
+
   timeoutId = setTimeout(() => runCountdown(step + 1, n), randomDelay());
 }
 
