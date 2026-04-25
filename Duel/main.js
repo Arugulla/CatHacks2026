@@ -173,7 +173,7 @@ function showRoundResult(winner, earlyPlayer, p1Ms, p2Ms, matchOver, champion, w
     againBtn.style.display = 'inline-block';
   } else {
     nextBtn.style.display  = 'inline-block';
-    nextBtn.textContent    = `⚔ Round ${currentRound + 1}`;
+    nextBtn.innerHTML = `⚔ Round ${currentRound + 1}`;
     nextBtn.onclick = () => {
       advanceRound();
       updateStatusBar();

@@ -61,7 +61,7 @@ body {
 .wanted-tag{font-family:'Rye',cursive;font-size:0.7rem;letter-spacing:0.4em;color:var(--brown);border:2px solid var(--brown);padding:0.2rem 0.8rem;display:inline-block;margin-bottom:0.5rem;}
 .game-title{font-family:'Rye',cursive;font-size:clamp(2.8rem,7vw,4.5rem);color:var(--brown);line-height:1;text-shadow:3px 3px 0 var(--dust),-1px -1px 0 rgba(0,0,0,0.3);margin:0.3rem 0;}
 .subtitle{font-family:'Playfair Display',serif;font-style:italic;font-size:1rem;color:var(--brown);margin-bottom:1rem;opacity:0.8;}
-.revolver-art{font-size:3rem;margin:0.5rem 0;display:block;filter:drop-shadow(2px 2px 4px rgba(0,0,0,0.4));animation:rock 3s ease-in-out infinite;}
+.revolver-art{font-size:3rem;margin:0.5rem auto;display:block;filter:drop-shadow(2px 2px 4px rgba(0,0,0,0.4));animation:rock 3s ease-in-out infinite;}
 @keyframes rock{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
 .reward{font-family:'Special Elite',cursive;font-size:0.75rem;color:var(--blood);letter-spacing:0.15em;margin-bottom:0.8rem;}
 .menu-grid{display:flex;flex-direction:column;gap:0.5rem;width:100%;margin-top:0.5rem;}
@@ -236,7 +236,7 @@ body {
     <div class="wanted-tag">⭐ WANTED ⭐</div>
     <div class="game-title">HIGH NOON</div>
     <div class="subtitle">— The Quickdraw Duel —</div>
-    <span class="revolver-art">🔫</span>
+   <img class="revolver-art" src="./hat.png" alt="" style="width:80px;height:auto;object-fit:contain;">
     <div class="reward">REWARD: GLORY & BRAGGING RIGHTS</div>
     <div class="menu-grid">
       <button class="menu-btn" onclick="showScreen('play-select')"><span class="menu-btn-icon">🤠</span> Play</button>
@@ -332,7 +332,7 @@ body {
     <hr class="divider">
     <div class="btn-row">
       <button class="btn btn-primary" id="next-btn">⚔ NEXT ROUND</button>
-      <button class="btn btn-gold" id="again-btn" style="display:none;" onclick="startMatch()">🔫 Play Again</button>
+    <button class="btn btn-gold" id="again-btn" style="display:none;" onclick="startMatch()">🔫 Play Again</button>
       <button class="btn btn-secondary" onclick="showScreen('main-menu')">🏠 Menu</button>
     </div>
   </div>
