@@ -1,41 +1,11 @@
 # CatHacks2026
-University Of Kentucky Hackathon Spring 2026 project
+University Of Kentucky Hackathon Spring 2026 project (Run It Down Ranch)
+By: Andy Zheng and Jeffrey Zheng
 
-Person 1: Frontend / UI / Experience
-Owns everything the user sees and interacts with
-Responsibilities:
-Layout (title, buttons, game area)
-Western theme styling (this matters for judging)
-Animations (countdown, “DRAW!” flash)
-Sound effects (gunshot, click, etc.)
-Display results (winner, reaction time, messages)
-What to build:
-Start screen (“Start Duel” button)
-Game screen:
-Countdown text
-Big “DRAW!” signal
-Result screen:
+Setup:
+1. Have JS and python installed
+2. Go to the directory where the three files ```gameLogic.js``` , ```index.html``` , and ```main.js`` are located
+3. In bash run ```python -m http.server 8000```
+4. Now on a internet explorer open ```http://localhost:8000```
 
-“Player 1 Wins” / “Too Early!”
-Reaction times
-Suggested tools:
-HTML + CSS
-Google Fonts (search western-style fonts)
-CSS animations or simple JS DOM updates
-
-👤 Person 2: Game Logic / Core Mechanics
-Owns the brain of the game
-
-Responsibilities:
-Timing system
-Input detection (keyboard)
-Win/lose logic
-Anti-cheat (early click detection)
-Core logic:
-Random delay (2–5 sec)
-Track when “DRAW!” appears
-Capture keypress timestamps
-Compare reaction times
-Keys:
-Player 1 → A
-Player 2 → L
+Alternatively you can run live preview on ```index.html``` in vscode
