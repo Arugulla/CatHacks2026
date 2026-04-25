@@ -1,13 +1,12 @@
 // main.js — UI, DOM wiring, customize, settings, case-rolling, keyboard/click handlers
 
 import {
-  settings, ensureAudio, vol,
-  playGunshot, playClick, playDrawHorn, playBuzz,
-  HATS, OUTFITS, FACES, CASE_ITEMS,
-  inventory, equipped, saveCustom,
+  settings, ensureAudio,
+  playGunshot, playClick, playDrawHorn,
+  ALL_GEAR, CASE_ITEMS,
+  inventory, equipped, saveCustom, keybinds, setKeybind, keyLabel,
   gameMode, currentRound, roundResults, bestMs,
-  gamePhase, drawTime, wallBrokenBy, p1RoundTime, p2RoundTime,
-  registerCallbacks, initMatch, startRound, handleInput, handleWallHit, advanceRound,
+  registerCallbacks, initMatch, startRound, handleInput, advanceRound,
 } from './gameLogic.js';
 
 // ═══════════════════════════════════════════════════════
@@ -22,6 +21,7 @@ export function showScreen(id) {
     renderItemGrid();
     buildCaseStripInitial();
   }
+  if (id === 'settings-screen') updateKeybindLabels();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -35,6 +35,7 @@ window.selectPlayMode = function(m) {
   document.getElementById('mode-practice').classList.toggle('selected', m === 'practice');
   document.getElementById('mode-local').classList.toggle('selected', m === 'local');
   document.getElementById('local-keys-hint').style.display = m === 'local' ? 'block' : 'none';
+  updateKeybindLabels();
 };
 
 window.changeRounds = function(d) {
@@ -47,10 +48,10 @@ window.startMatch = function() {
   initMatch(playMode, selectedRounds);
 
   const isLocal = playMode === 'local';
-  document.getElementById('p1-key').textContent  = 'A';
+  document.getElementById('p1-key').textContent  = keyLabel(keybinds.p1);
   document.getElementById('p1-name').textContent = 'PLAYER 1';
   document.getElementById('p2-name').textContent = isLocal ? 'PLAYER 2' : 'OUTLAW AI';
-  document.getElementById('p2-key').textContent  = isLocal ? 'L' : 'CLICK';
+  document.getElementById('p2-key').textContent  = isLocal ? keyLabel(keybinds.p2) : 'CLICK';
   document.getElementById('input-indicators').style.display = isLocal ? 'flex' : 'none';
 
   updateCharPreviews();
@@ -69,43 +70,23 @@ registerCallbacks({
     cd.textContent   = word;
     cd.className     = 'countdown-display flash';
     setTimeout(() => cd.className = 'countdown-display', 350);
-    if (isBait) {
-      document.getElementById('twist-badge').textContent = '⚠ HOLD YOUR NERVE...';
-    }
+    if (isBait) document.getElementById('twist-badge').textContent = '⚠ HOLD YOUR NERVE...';
   },
 
-  onDraw(mode) {
+  onDraw(mode, wallRound) {
     document.getElementById('countdown').style.display = 'none';
-    document.getElementById('wall-display').style.display = 'none';
-    document.getElementById('draw-text').style.display = 'block';
+    document.getElementById('wall-display').style.display = wallRound ? 'flex' : 'none';
+    document.getElementById('draw-text').style.display = wallRound ? 'none' : 'block';
     document.getElementById('zone-hint').textContent =
-      mode === 'local' ? '⬆ P1[A]  P2[L] ⬆' : '⬆ CLICK NOW! ⬆';
-    document.getElementById('draw-zone').classList.add('live');
-    document.getElementById('twist-badge').textContent = 'DRAW!';
-  },
-
-  onWall(mode) {
-    const zone = document.getElementById('draw-zone');
-    zone.className = 'draw-zone wall-active';
-    document.getElementById('countdown').style.display = 'none';
-    document.getElementById('draw-text').style.display = 'none';
-    document.getElementById('wall-display').style.display = 'flex';
-    document.getElementById('wall-hint').textContent =
-      mode === 'local' ? 'P1: [A]  P2: [L]  — FIRST HIT WINS!' : 'CLICK TO SMASH THE WALL!';
-    document.getElementById('twist-badge').textContent = '🧱 WALL! — Smash it to advance!';
-  },
-
-  onWallResume(brokenBy, mode) {
-    triggerWallFlash();
-    const who = brokenBy === 'ai' ? 'OUTLAW AI'
-              : brokenBy === 'p1' ? 'PLAYER 1' : 'PLAYER 2';
-    document.getElementById('twist-badge').textContent = `🧱 Wall smashed by ${who}! NOW DRAW!`;
-    document.getElementById('draw-zone').className = 'draw-zone';
-    document.getElementById('wall-display').style.display = 'none';
-    document.getElementById('countdown').style.display = 'block';
-    document.getElementById('countdown').textContent = '';
-    document.getElementById('ind-p1').classList.remove('pressed');
-    document.getElementById('ind-p2').classList.remove('pressed');
+      mode === 'local' ? `⬆ P1[${keyLabel(keybinds.p1)}]  P2[${keyLabel(keybinds.p2)}] ⬆` : '⬆ CLICK NOW! ⬆';
+    document.getElementById('draw-zone').className = wallRound ? 'draw-zone wall-active live' : 'draw-zone live';
+    document.getElementById('duelists-row').classList.remove('backs-turned');
+    document.getElementById('twist-badge').textContent = wallRound
+      ? '🧱 WALL TRAP! First shot breaks it and loses!'
+      : 'DRAW!';
+    document.getElementById('wall-hint').textContent = wallRound
+      ? (mode === 'local' ? 'DON’T BE FIRST! Let the other player break it!' : 'DON’T SHOOT FIRST!')
+      : '';
   },
 
   onEarly(player, mode) {
@@ -113,13 +94,14 @@ registerCallbacks({
     setTimeout(() => showRoundResult('early', player, null, null), 400);
   },
 
-  onResult({ winner, p1Ms, p2Ms, matchOver, champion, p1Wins, p2Wins }) {
+  onResult({ winner, p1Ms, p2Ms, matchOver, champion, wallRound, wallBrokenBy }) {
     if (winner === 'p1' || winner === 'p2' || winner === 'ai') {
       muzzleFlash();
       playGunshot();
     }
+    if (wallRound) triggerWallFlash();
     if (winner === 'p1') spawnParticles(['🌟','⭐','🔥','💥'], 10);
-    showRoundResult(winner, null, p1Ms, p2Ms, matchOver, champion);
+    showRoundResult(winner, null, p1Ms, p2Ms, matchOver, champion, wallRound, wallBrokenBy);
   },
 });
 
@@ -129,6 +111,7 @@ registerCallbacks({
 function beginRound() {
   const zone = document.getElementById('draw-zone');
   zone.className = 'draw-zone';
+  document.getElementById('duelists-row').classList.add('backs-turned');
   document.getElementById('countdown').style.display = 'block';
   document.getElementById('countdown').textContent   = '—';
   document.getElementById('draw-text').style.display  = 'none';
@@ -140,7 +123,7 @@ function beginRound() {
   startRound();
 }
 
-function showRoundResult(winner, earlyPlayer, p1Ms, p2Ms, matchOver, champion) {
+function showRoundResult(winner, earlyPlayer, p1Ms, p2Ms, matchOver, champion, wallRound = false, wallBrokenBy = null) {
   showScreen('result-screen');
 
   const headline  = document.getElementById('result-headline');
@@ -152,8 +135,10 @@ function showRoundResult(winner, earlyPlayer, p1Ms, p2Ms, matchOver, champion) {
 
   champArea.innerHTML = '';
   againBtn.style.display = 'none';
+  sub.textContent = wallRound && wallBrokenBy
+    ? `${wallBrokenBy === 'p1' ? 'Player 1' : wallBrokenBy === 'p2' ? 'Player 2' : 'The AI'} broke the wall first. The patient duelist wins.`
+    : 'Slicker than a greased rattlesnake.';
 
-  // Round progress pips
   const prog = document.getElementById('round-progress');
   prog.innerHTML = roundResults.map((r, i) => {
     const cls   = r === 'p1' ? 'win-p1' : (r === 'p2' || r === 'ai') ? 'win-p2' : '';
@@ -204,28 +189,12 @@ function buildTimeDisplay(p1Ms, p2Ms, winner) {
   if (gameMode === 'practice') {
     const isRecord = winner === 'p1' && bestMs === p1Ms && p1Ms < 300;
     return `
-      <div class="player-time">
-        <div class="player-label">YOUR DRAW</div>
-        <div class="player-ms ${winner === 'p1' ? 'best' : ''}">
-          ${p1Ms !== null ? p1Ms + 'ms' : '—'}
-          ${isRecord ? '<span class="new-record">NEW RECORD</span>' : ''}
-        </div>
-      </div>
-      <div class="player-time">
-        <div class="player-label">OUTLAW AI</div>
-        <div class="player-ms p2">${p2Ms !== null ? p2Ms + 'ms' : '—'}</div>
-      </div>`;
-  } else {
-    return `
-      <div class="player-time">
-        <div class="player-label">PLAYER 1</div>
-        <div class="player-ms ${winner === 'p1' ? 'best' : 'p2'}">${p1Ms !== null ? p1Ms + 'ms' : '—'}</div>
-      </div>
-      <div class="player-time">
-        <div class="player-label">PLAYER 2</div>
-        <div class="player-ms ${winner === 'p2' || winner === 'ai' ? 'best' : 'p2'}">${p2Ms !== null ? p2Ms + 'ms' : '—'}</div>
-      </div>`;
+      <div class="player-time"><div class="player-label">YOUR DRAW</div><div class="player-ms ${winner === 'p1' ? 'best' : ''}">${p1Ms !== null ? p1Ms + 'ms' : '—'} ${isRecord ? '<span class="new-record">NEW RECORD</span>' : ''}</div></div>
+      <div class="player-time"><div class="player-label">OUTLAW AI</div><div class="player-ms p2">${p2Ms !== null ? p2Ms + 'ms' : '—'}</div></div>`;
   }
+  return `
+    <div class="player-time"><div class="player-label">PLAYER 1</div><div class="player-ms ${winner === 'p1' ? 'best' : 'p2'}">${p1Ms !== null ? p1Ms + 'ms' : '—'}</div></div>
+    <div class="player-time"><div class="player-label">PLAYER 2</div><div class="player-ms ${winner === 'p2' || winner === 'ai' ? 'best' : 'p2'}">${p2Ms !== null ? p2Ms + 'ms' : '—'}</div></div>`;
 }
 
 function updateStatusBar() {
@@ -233,11 +202,9 @@ function updateStatusBar() {
   const p1W = roundResults.filter(r => r === 'p1').length;
   const p2W = roundResults.filter(r => r === 'p2' || r === 'ai').length;
   if (gameMode === 'local') {
-    document.getElementById('wins-display').innerHTML =
-      `P1 <span class="status-value">${p1W}</span> — <span class="status-value">${p2W}</span> P2`;
+    document.getElementById('wins-display').innerHTML = `P1 <span class="status-value">${p1W}</span> — <span class="status-value">${p2W}</span> P2`;
   } else {
-    document.getElementById('wins-display').innerHTML =
-      `WINS <span class="status-value">${p1W}</span>`;
+    document.getElementById('wins-display').innerHTML = `WINS <span class="status-value">${p1W}</span>`;
   }
   document.getElementById('best-time').textContent = bestMs !== null ? bestMs + 'ms' : '—';
 }
@@ -245,18 +212,24 @@ function updateStatusBar() {
 // ═══════════════════════════════════════════════════════
 // KEYBOARD + CLICK
 // ═══════════════════════════════════════════════════════
+function keyMatches(e, savedKey) {
+  return e.key.toLowerCase() === savedKey || e.code === savedKey;
+}
+
 document.addEventListener('keydown', e => {
-  if (['a','A'].includes(e.key)) {
+  if (document.body.dataset.listeningKeybind) return;
+
+  if (keyMatches(e, keybinds.p1)) {
     handleInput('p1');
     document.getElementById('ind-p1').classList.add('pressed');
   }
-  if (['l','L'].includes(e.key)) {
+  if (gameMode === 'local' && keyMatches(e, keybinds.p2)) {
     handleInput('p2');
     document.getElementById('ind-p2').classList.add('pressed');
   }
-  if (e.code === 'Space' || e.code === 'Enter') {
+  if ((e.code === 'Space' || e.code === 'Enter') && gameMode === 'practice') {
     e.preventDefault();
-    if (gameMode === 'practice') handleInput('p1');
+    handleInput('p1');
   }
 });
 
@@ -268,7 +241,6 @@ window.handleZoneClick = function() {
 // CUSTOMIZE SCREEN
 // ═══════════════════════════════════════════════════════
 let editingPlayer = 1;
-let currentTab    = 'hats';
 
 window.selectCharSlot = function(p) {
   editingPlayer = p;
@@ -277,23 +249,15 @@ window.selectCharSlot = function(p) {
   renderItemGrid();
 };
 
-window.switchTab = function(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach((b, i) =>
-    b.classList.toggle('active', ['hats','outfits','faces'][i] === tab)
-  );
+window.switchTab = function() {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.add('active'));
   renderItemGrid();
 };
 
-function getTabItems() {
-  return currentTab === 'hats' ? HATS : currentTab === 'outfits' ? OUTFITS : FACES;
-}
-
 function renderItemGrid() {
   const grid  = document.getElementById('item-grid');
-  const items = getTabItems();
   grid.innerHTML = '';
-  items.forEach(em => {
+  ALL_GEAR.forEach(em => {
     const btn        = document.createElement('button');
     btn.className    = 'item-btn';
     btn.textContent  = em;
@@ -382,17 +346,14 @@ window.openCase = function() {
   let startTime   = null;
 
   function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
-
   function animate(ts) {
     if (!startTime) startTime = ts;
     const elapsed  = ts - startTime;
     const progress = Math.min(elapsed / duration, 1);
     strip.style.transform = `translateX(${finalX * easeOut(progress)}px)`;
-    if (elapsed < 2000 && Math.floor(elapsed / 80) !== Math.floor((elapsed - 16) / 80)) {
-      playClick();
-    }
+    if (elapsed < 2000 && Math.floor(elapsed / 80) !== Math.floor((elapsed - 16) / 80)) playClick();
     if (progress < 1) requestAnimationFrame(animate);
-    else              finishCase(won, btn);
+    else finishCase(won, btn);
   }
   requestAnimationFrame(animate);
 };
@@ -404,8 +365,7 @@ function finishCase(won, btn) {
 
   const res         = document.getElementById('case-result');
   const rarityLabel = { common:'Common', rare:'Rare', epic:'Epic', legendary:'LEGENDARY' }[won.rarity];
-  const rarityClass = won.rarity === 'legendary' ? 'won-legendary'
-                    : won.rarity === 'epic'       ? 'won-epic' : 'won';
+  const rarityClass = won.rarity === 'legendary' ? 'won-legendary' : won.rarity === 'epic' ? 'won-epic' : 'won';
 
   if (!inventory.includes(won.emoji)) {
     inventory.push(won.emoji);
@@ -431,6 +391,35 @@ window.updateSettings = function() {
   settings.wallEvents = document.getElementById('wall-toggle').checked;
   settings.baitWords  = document.getElementById('bait-toggle').checked;
   document.getElementById('vol-label').textContent = document.getElementById('vol-slider').value + '%';
+  updateKeybindLabels();
+};
+
+function updateKeybindLabels() {
+  document.querySelectorAll('[data-key-label="p1"]').forEach(el => el.textContent = keyLabel(keybinds.p1));
+  document.querySelectorAll('[data-key-label="p2"]').forEach(el => el.textContent = keyLabel(keybinds.p2));
+  document.getElementById('ind-p1').textContent = `P1 [${keyLabel(keybinds.p1)}]`;
+  document.getElementById('ind-p2').textContent = `P2 [${keyLabel(keybinds.p2)}]`;
+}
+
+window.listenForKeybind = function(player) {
+  const btn = document.getElementById(player + '-bind-btn');
+  const oldText = btn.textContent;
+  btn.textContent = 'PRESS A KEY...';
+  document.body.dataset.listeningKeybind = player;
+
+  const capture = (e) => {
+    e.preventDefault();
+    const ok = setKeybind(player, e.key.length === 1 ? e.key.toLowerCase() : e.code);
+    document.body.dataset.listeningKeybind = '';
+    window.removeEventListener('keydown', capture, true);
+    if (!ok) {
+      btn.textContent = oldText;
+      alert('That key is already used by the other player. Pick another key.');
+      return;
+    }
+    updateKeybindLabels();
+  };
+  window.addEventListener('keydown', capture, true);
 };
 
 window.quitGame = function() {
@@ -468,8 +457,6 @@ function spawnParticles(chars, count) {
   }
 }
 
-// ── Expose showScreen globally for inline onclick handlers in the HTML ──
 window.showScreen = showScreen;
-
-// ── Init ──
 updateCharPreviews();
+updateKeybindLabels();

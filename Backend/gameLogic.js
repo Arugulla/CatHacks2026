@@ -115,12 +115,14 @@ export function playCrashSound() {
   src.start();
 }
 
+
 // ═══════════════════════════════════════════════════════
 // CHARACTER DATA
 // ═══════════════════════════════════════════════════════
-export const HATS    = ['🤠','👒','🎩','⛑️','🪖','👑','🎓','🧢'];
-export const OUTFITS = ['👘','🥻','🧥','🦺','👔','🩱','🥼','🩲'];
-export const FACES   = ['😎','😈','🤡','👻','💀','🤖','👽','🦊'];
+export const HATS = ['🤠','👒','🎩','⛑️','🪖','👑','🎓','🧢','🏴‍☠️'];
+export const FACES = ['😎','😈','🤡','👻','💀','🤖','👽','🦊','🕵️','🃏'];
+export const OUTFITS = ['👘','🥻','🧥','🦺','👔','🥼','🧣','🧤','🥾'];
+export const ALL_GEAR = ['👘','🥻','🧥','🦺','👔','🥼','🧣','🧤','🥾', '😎','😈','🤡','👻','💀','🤖','👽','🦊','🕵️','🃏','🤠','👒','🎩','⛑️','🪖','👑','🎓','🧢','🏴‍☠️'];
 
 export const CASE_ITEMS = [
   {emoji:'🤠',rarity:'common'},{emoji:'👒',rarity:'common'},{emoji:'😎',rarity:'common'},
@@ -140,164 +142,139 @@ export function saveCustom() {
 }
 
 // ═══════════════════════════════════════════════════════
+// SETTINGS + KEYBINDS
+// ═══════════════════════════════════════════════════════
+const defaultKeybinds = { p1: 'a', p2: 'l' };
+export let keybinds = JSON.parse(localStorage.getItem('hn_keybinds') || JSON.stringify(defaultKeybinds));
+
+export function setKeybind(player, key) {
+  if (!['p1','p2'].includes(player) || !key) return false;
+  const normalized = key.length === 1 ? key.toLowerCase() : key;
+  const other = player === 'p1' ? 'p2' : 'p1';
+  if (normalized === keybinds[other]) return false;
+  keybinds[player] = normalized;
+  localStorage.setItem('hn_keybinds', JSON.stringify(keybinds));
+  return true;
+}
+
+export function keyLabel(key) {
+  if (key === ' ') return 'SPACE';
+  return key.length === 1 ? key.toUpperCase() : key.replace('Arrow','').toUpperCase();
+}
+
+// ═══════════════════════════════════════════════════════
 // GAME STATE
 // ═══════════════════════════════════════════════════════
-export let gameMode      = 'practice'; // 'practice' | 'local'
-export let totalRounds   = 3;
-export let currentRound  = 1;
-export let roundResults  = [];         // array of 'p1' | 'p2' | 'ai' winners
-export let bestMs        = null;
+export let gameMode = 'practice';
+export let totalRounds = 3;
+export let currentRound = 1;
+export let roundResults = [];
+export let bestMs = null;
 
-// Round-level state
-export let gamePhase     = 'idle';     // idle | countdown | wall | live | result
-export let drawTime      = 0;
-export let wallBrokenBy  = null;       // 'p1' | 'p2' | null
-export let p1RoundTime   = null;
-export let p2RoundTime   = null;
+export let gamePhase = 'idle';
+export let drawTime = 0;
+export let wallRound = false;
+export let wallBrokenBy = null;
+export let p1RoundTime = null;
+export let p2RoundTime = null;
 
 let timeoutId = null;
+let baitShownThisRound = false;
 
-const COUNTDOWN_SEQ = [3, 2, 1];
-const BAIT_WORDS    = ['DRAW?', 'FIRE?', 'NOW?'];
+const COUNTDOWN_VALUES = [3, 2, 1];
+const BAIT_WORDS = ['DRAW?', 'FIRE?', 'NOW?', 'BANG?','SHOOT?','GO?','READY?','POW?','BLAM?'];
 
-// Callbacks wired up by main.js
 export let cb = {
-  onWord:       () => {},
-  onDraw:       () => {},
-  onWall:       () => {},
-  onWallResume: () => {},
-  onResult:     () => {},
-  onEarly:      () => {},
+  onWord: () => {},
+  onDraw: () => {},
+  onResult: () => {},
+  onEarly: () => {},
 };
 
-export function registerCallbacks(callbacks) {
-  cb = { ...cb, ...callbacks };
-}
+export function registerCallbacks(callbacks) { cb = { ...cb, ...callbacks }; }
 
-// ── Match setup ──
 export function initMatch(mode, rounds) {
-  gameMode     = mode;
-  totalRounds  = rounds;
+  gameMode = mode;
+  totalRounds = rounds;
   currentRound = 1;
   roundResults = [];
-  bestMs       = null;
+  bestMs = null;
 }
 
-// ── Round start ──
 export function startRound() {
-  gamePhase    = 'countdown';
-  drawTime     = 0;
+  clearTimeout(timeoutId);
+  gamePhase = 'countdown';
+  drawTime = 0;
+  wallRound = settings.wallEvents && Math.random() < 0.10;
   wallBrokenBy = null;
-  p1RoundTime  = null;
-  p2RoundTime  = null;
-
-  setTimeout(() => runCountdown([...COUNTDOWN_SEQ], 0), 600);
+  p1RoundTime = null;
+  p2RoundTime = null;
+  baitShownThisRound = false;
+  timeoutId = setTimeout(() => runCountdown(0, 3), 500);
 }
 
-function runCountdown(counts, idx) {
+function randomDelay() { return Math.floor(Math.random() * 3001); }
+
+function nextCount(last) {
+  if (Math.random() < 0.35) return last;
+  const choices = COUNTDOWN_VALUES.filter(n => n !== last);
+  return choices[Math.floor(Math.random() * choices.length)];
+}
+
+function runCountdown(step, lastNumber) {
   if (gamePhase !== 'countdown') return;
 
-  // Possibly inject a wall between count steps
-  if (idx > 0 && settings.wallEvents && Math.random() < 0.25) {
-    triggerWall(counts, idx);
-    return;
-  }
-
-  // Bait word fake-out before the last count
-  if (settings.baitWords && idx === counts.length - 1 && Math.random() < 0.3) {
+  if (settings.baitWords && !baitShownThisRound && step >= 1 && Math.random() < 0.25) {
+    baitShownThisRound = true;
     const bait = BAIT_WORDS[Math.floor(Math.random() * BAIT_WORDS.length)];
-    cb.onWord(bait, true); // true = bait
-    timeoutId = setTimeout(() => { if (gamePhase === 'countdown') runCountdown(counts, idx); }, 900);
+    cb.onWord(bait, true);
+    timeoutId = setTimeout(() => runCountdown(step, lastNumber), randomDelay());
     return;
   }
 
-  if (idx >= counts.length) {
+  if (step >= 4) {
     cb.onWord('', false);
-    const delay = 300 + Math.random() * 1800;
-    timeoutId = setTimeout(() => { if (gamePhase === 'countdown') triggerDraw(); }, delay);
+    timeoutId = setTimeout(() => { if (gamePhase === 'countdown') triggerDraw(); }, randomDelay());
     return;
   }
 
-  const n = counts[idx];
+  const n = step === 0 ? 3 : nextCount(lastNumber);
   cb.onWord(String(n), false);
   playCountBleep(n);
-  timeoutId = setTimeout(() => runCountdown(counts, idx + 1), 800);
-}
-
-function triggerWall() {
-  gamePhase    = 'wall';
-  wallBrokenBy = null;
-
-  playWallSound();
-  cb.onWall(gameMode);
-
-  // In practice mode the AI also races to smash the wall
-  if (gameMode === 'practice') {
-    const aiMs = 300 + Math.random() * 700;
-    timeoutId = setTimeout(() => {
-      if (gamePhase === 'wall') handleWallHit('ai');
-    }, aiMs);
-  }
-}
-
-export function handleWallHit(player) {
-  if (gamePhase !== 'wall') return;
-
-  if (gameMode === 'local') {
-    if (wallBrokenBy === null) {
-      wallBrokenBy = player;
-      resolveWall();
-    }
-  } else {
-    wallBrokenBy = player;
-    resolveWall();
-  }
-}
-
-function resolveWall() {
-  clearTimeout(timeoutId);
-  playCrashSound();
-
-  gamePhase = 'countdown';
-  cb.onWallResume(wallBrokenBy, gameMode);
-
-  timeoutId = setTimeout(() => {
-    if (gamePhase === 'countdown') triggerDraw();
-  }, 400 + Math.random() * 800);
+  timeoutId = setTimeout(() => runCountdown(step + 1, n), randomDelay());
 }
 
 function triggerDraw() {
   gamePhase = 'live';
-  drawTime  = performance.now();
-
+  drawTime = performance.now();
   playDrawHorn();
-  cb.onDraw(gameMode);
+  if (wallRound) playWallSound();
+  cb.onDraw(gameMode, wallRound);
 
   if (gameMode === 'practice') {
     const aiMs = 200 + Math.random() * 400;
-    timeoutId = setTimeout(() => {
-      if (gamePhase === 'live') endRound('ai', null, Math.round(aiMs));
-    }, aiMs);
+    timeoutId = setTimeout(() => { if (gamePhase === 'live') handleInput('ai'); }, aiMs);
   } else {
-    // 2-player: timeout if neither presses
     timeoutId = setTimeout(() => {
       if (gamePhase === 'live') {
-        if      (p1RoundTime !== null) endRound('p1', Math.round(p1RoundTime), null);
-        else if (p2RoundTime !== null) endRound('p2', null, Math.round(p2RoundTime));
-        else                           endRound('draw', null, null);
+        if (p1RoundTime !== null) endRound(resolveWinnerFromShot('p1'), p1RoundTime, null);
+        else if (p2RoundTime !== null) endRound(resolveWinnerFromShot('p2'), null, p2RoundTime);
+        else endRound('draw', null, null);
       }
     }, 3000);
   }
 }
 
-// ── Input handling ──
+function resolveWinnerFromShot(shooter) {
+  if (!wallRound) return shooter;
+  wallBrokenBy = shooter;
+  playCrashSound();
+  if (gameMode === 'practice') return shooter === 'p1' ? 'ai' : 'p1';
+  return shooter === 'p1' ? 'p2' : 'p1';
+}
+
 export function handleInput(player) {
   ensureAudio();
-
-  if (gamePhase === 'wall') {
-    handleWallHit(player);
-    return;
-  }
 
   if (gamePhase === 'countdown') {
     clearTimeout(timeoutId);
@@ -308,48 +285,37 @@ export function handleInput(player) {
   }
 
   if (gamePhase !== 'live') return;
-
   const reaction = Math.round(performance.now() - drawTime);
-
   if (player === 'p1' && p1RoundTime === null) p1RoundTime = reaction;
   if (player === 'p2' && p2RoundTime === null) p2RoundTime = reaction;
 
+  clearTimeout(timeoutId);
   if (gameMode === 'practice') {
-    clearTimeout(timeoutId);
-    const aiMs = 200 + Math.random() * 400;
-    endRound(reaction < aiMs ? 'p1' : 'ai', reaction, Math.round(aiMs));
+    if (player === 'ai') endRound(resolveWinnerFromShot('ai'), null, reaction);
+    else endRound(resolveWinnerFromShot('p1'), reaction, null);
   } else {
-    if (p1RoundTime !== null && p2RoundTime !== null) {
-      clearTimeout(timeoutId);
-      endRound(p1RoundTime < p2RoundTime ? 'p1' : 'p2', p1RoundTime, p2RoundTime);
-    }
+    endRound(resolveWinnerFromShot(player), p1RoundTime, p2RoundTime);
   }
 }
 
 function endRound(winner, p1Ms, p2Ms) {
   gamePhase = 'result';
-
-  if (winner === 'p1' && (bestMs === null || p1Ms < bestMs)) bestMs = p1Ms;
-
+  if (winner === 'p1' && p1Ms !== null && (bestMs === null || p1Ms < bestMs)) bestMs = p1Ms;
   roundResults.push(winner);
 
-  const p1Wins    = roundResults.filter(r => r === 'p1').length;
-  const p2Wins    = roundResults.filter(r => r === 'p2' || r === 'ai').length;
+  const p1Wins = roundResults.filter(r => r === 'p1').length;
+  const p2Wins = roundResults.filter(r => r === 'p2' || r === 'ai').length;
   const winsNeeded = Math.ceil(totalRounds / 2);
-  const matchOver = p1Wins >= winsNeeded || p2Wins >= winsNeeded
-                    || roundResults.filter(r => r !== null).length >= totalRounds;
+  const matchOver = p1Wins >= winsNeeded || p2Wins >= winsNeeded || roundResults.length >= totalRounds;
 
   let champion = null;
   if (matchOver) {
-    if      (p1Wins > p2Wins) champion = gameMode === 'local' ? 'PLAYER 1' : 'YOU';
+    if (p1Wins > p2Wins) champion = gameMode === 'local' ? 'PLAYER 1' : 'YOU';
     else if (p2Wins > p1Wins) champion = gameMode === 'local' ? 'PLAYER 2' : 'THE AI OUTLAW';
-    else                       champion = "NOBODY — IT'S A TIE";
+    else champion = "NOBODY — IT'S A TIE";
   }
 
-  cb.onResult({ winner, p1Ms, p2Ms, matchOver, champion, p1Wins, p2Wins });
+  cb.onResult({ winner, p1Ms, p2Ms, matchOver, champion, p1Wins, p2Wins, wallRound, wallBrokenBy });
 }
 
-// ── Helpers ──
-export function advanceRound() {
-  currentRound++;
-}
+export function advanceRound() { currentRound++; }
