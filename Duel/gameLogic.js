@@ -119,10 +119,7 @@ export function playCrashSound() {
 // ═══════════════════════════════════════════════════════
 // CHARACTER DATA
 // ═══════════════════════════════════════════════════════
-export const HATS = ['🤠','👒','🎩','⛑️','🪖','👑','🎓','🧢','🏴‍☠️'];
-export const FACES = ['😎','😈','🤡','👻','💀','🤖','👽','🦊','🕵️','🃏'];
-export const OUTFITS = ['👘','🥻','🧥','🦺','👔','🥼','🧣','🧤','🥾'];
-export const ALL_GEAR = [...HATS, ...OUTFITS, ...FACES];
+export const ALL_GEAR = ['👘','🥻','🧥','🦺','👔','🥼','🧣','🧤','🥾','😎','😈','🤡','👻','💀','🤖','👽','🦊','🕵️','🃏','🤠','👒','🎩','⛑️','🪖','👑','🎓','🧢','🏴‍☠️'];
 
 export const CASE_ITEMS = [
   {emoji:'🤠',rarity:'common'},{emoji:'👒',rarity:'common'},{emoji:'😎',rarity:'common'},
