@@ -7,7 +7,6 @@ import {
   inventory, equipped, saveCustom,
   gameMode, currentRound, roundResults, bestMs,
   gamePhase, drawTime, wallBrokenBy, p1RoundTime, p2RoundTime,
-  WIN_LINES, LOSE_LINES,
   registerCallbacks, initMatch, startRound, handleInput, handleWallHit, advanceRound,
 } from './gameLogic.js';
 
@@ -171,12 +170,10 @@ function showRoundResult(winner, earlyPlayer, p1Ms, p2Ms, matchOver, champion) {
   } else if (winner === 'p1') {
     headline.textContent = gameMode === 'local' ? 'P1 WINS!' : 'YOU WIN!';
     headline.className   = 'result-headline win';
-    sub.textContent      = WIN_LINES[Math.floor(Math.random() * WIN_LINES.length)];
     timeDiv.innerHTML    = buildTimeDisplay(p1Ms, p2Ms, 'p1');
   } else if (winner === 'p2' || winner === 'ai') {
     headline.textContent = gameMode === 'local' ? 'P2 WINS!' : 'TOO SLOW!';
     headline.className   = 'result-headline lose';
-    sub.textContent      = LOSE_LINES[Math.floor(Math.random() * LOSE_LINES.length)];
     timeDiv.innerHTML    = buildTimeDisplay(p1Ms, p2Ms, winner);
   } else {
     headline.textContent = 'DEAD HEAT!';

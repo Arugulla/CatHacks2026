@@ -371,15 +371,15 @@ body {
   <div class="panel">
     <div class="panel-title">Settings</div>
     <div class="settings-row">
-      <div><div class="settings-label">Sound Effects</div><div class="settings-desc">Gunshots, bleeps & horns</div></div>
-      <label class="toggle"><input type="checkbox" id="sfx-toggle" checked onchange="updateSettings()"><span class="toggle-slider"></span></label>
-    </div>
-    <div class="settings-row">
       <div><div class="settings-label">Volume</div><div class="settings-desc">Master volume</div></div>
       <div style="display:flex;align-items:center;gap:0.5rem;">
         <span style="font-size:0.8rem;color:var(--dust);" id="vol-label">70%</span>
         <input type="range" class="vol-slider" min="0" max="100" value="70" id="vol-slider" oninput="updateSettings()">
       </div>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-label">Sound Effects</div><div class="settings-desc">Gunshots, bleeps & horns</div></div>
+      <label class="toggle"><input type="checkbox" id="sfx-toggle" checked onchange="updateSettings()"><span class="toggle-slider"></span></label>
     </div>
     <div class="settings-row">
       <div><div class="settings-label">Wall Events</div><div class="settings-desc">Random walls during countdown</div></div>

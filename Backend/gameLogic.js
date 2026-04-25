@@ -160,21 +160,6 @@ let timeoutId = null;
 const COUNTDOWN_SEQ = [3, 2, 1];
 const BAIT_WORDS    = ['DRAW?', 'FIRE?', 'NOW?'];
 
-export const WIN_LINES = [
-  "Slicker than a greased rattlesnake.",
-  "Fastest gun in the territory.",
-  "The devil blinked first.",
-  "Even the crows tipped their hats.",
-  "That draw'd make Billy the Kid nervous.",
-];
-export const LOSE_LINES = [
-  "Boot Hill's got another tenant.",
-  "Your mama warned you, stranger.",
-  "That's why you stick to poker.",
-  "The undertaker sends his regards.",
-  "Try again, greenhorn.",
-];
-
 // Callbacks wired up by main.js
 export let cb = {
   onWord:       () => {},
