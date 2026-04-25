@@ -1,3 +1,8 @@
+<!-- 
+http://172.29.14.88:8000/TEST.html
+-->
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -890,18 +895,26 @@ function showResult(winner, playerMs, aiMs) {
 
   // Time display
   const isNewRecord = winner === 'player' && bestMs === playerMs && playerMs < 300;
-  const displayPlayer = Math.round(playerMs);
-  const displayAi = Math.round(aiMs);
-  timeDiv.innerHTML = `
-    <div class="player-time">
-      <div class="player-label">YOUR DRAW</div>
-      <div class="player-ms ${winner === 'player' ? 'best' : ''}">${displayPlayer}ms${isNewRecord ? '<span class="new-record">NEW RECORD</span>' : ''}</div>
+const displayPlayer = Math.round(playerMs).toString().padStart(4, '0');
+
+const displayAi = (
+  Number.isFinite(aiMs)
+    ? Math.round(aiMs)
+    : Math.round(200 + Math.random() * 400)
+).toString().padStart(4, '0');
+timeDiv.innerHTML = `
+  <div class="player-time">
+    <div class="player-label">YOUR DRAW</div>
+    <div class="player-ms ${winner === 'player' ? 'best' : ''}">
+      ${displayPlayer}ms
+      ${isNewRecord ? '<span class="new-record">NEW RECORD</span>' : ''}
     </div>
-    <div class="player-time">
-      <div class="player-label">OUTLAW AI</div>
-      <div class="player-ms p2">${displayAi}ms</div>
-    </div>
-  `;
+  </div>
+  <div class="player-time">
+    <div class="player-label">OUTLAW AI</div>
+    <div class="player-ms p2">${displayAi}ms</div>
+  </div>
+`;
 
   // Marathon mode
   if (isMarathon) {
